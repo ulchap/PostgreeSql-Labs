@@ -1,0 +1,113 @@
+create type role_values as enum ('admin', 'stuff', 'customer');
+
+CREATE TABLE users
+(
+	Id SERIAL PRIMARY KEY,
+	Name CHARACTER VARYING(50) NOT NULL,
+	LastName CHARACTER VARYING(50) NOT NULL,
+	Email CHARACTER VARYING(100) NOT NULL UNIQUE,
+	Password CHARACTER VARYING(255) NOT NULL,
+	RoleId 	INTEGER,
+	FOREIGN KEY (RoleId) REFERENCES roles(Id) ON DELETE CASCADE ON UPDATE CASCADE,
+	CONSTRAINT valid_email CHECK (Email ~ '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
+);
+
+CREATE INDEX ix_user_name ON users (name);
+CREATE INDEX ix_user_email ON users (email);
+
+CREATE TABLE roles
+(
+	Id SERIAL PRIMARY KEY,
+	Name role_values NOT NULL
+);
+
+CREATE TABLE products
+(
+	Id SERIAL PRIMARY KEY,
+	Name CHARACTER VARYING(100) NOT NULL,
+	Description TEXT,
+	Price MONEY NOT NULL,
+	Quantity INTEGER NOT NULL,
+	CategoryId INTEGER,
+	FOREIGN KEY (CategoryId) REFERENCES categories(Id) ON DELETE CASCADE ON UPDATE CASCADE,
+	CONSTRAINT check_price CHECK(Price::numeric > 0.0 AND Price::numeric < 100000.0),
+	CONSTRAINT check_quantity CHECK(Quantity >= 0)
+);
+
+CREATE INDEX ix_product_name ON products (name);
+CREATE INDEX ix_product_category ON products (categoryid);
+
+CREATE TABLE categories
+(
+	Id SERIAL PRIMARY KEY,
+	Name CHARACTER VARYING(50) NOT NULL
+);
+
+CREATE TABLE orders
+(
+	Id SERIAL PRIMARY KEY,
+	CreatedAt TIMESTAMP NOT NULL,
+	UserId INTEGER,
+	FOREIGN KEY (UserId) REFERENCES users(Id) ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+CREATE INDEX ix_orders_user_id ON orders (userid);
+CREATE INDEX ix_orders_order_createdat ON orders (createdat);
+
+CREATE TABLE order_product
+(
+	Id SERIAL PRIMARY KEY,
+	ProductId INTEGER,
+	OrderId INTEGER,
+	Quantity INTEGER NOT NULL,
+	CONSTRAINT check_quantity CHECK(Quantity >= 0),
+	FOREIGN KEY (ProductId) REFERENCES products(Id) ON DELETE CASCADE ON UPDATE CASCADE,
+	FOREIGN KEY (OrderId) REFERENCES orders(Id) ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+CREATE TABLE reviews
+(
+	Id SERIAL PRIMARY KEY,
+	UserId INTEGER,
+	ProductId INTEGER,
+	Content TEXT,
+	Rating INTEGER NOT NULL,
+	CreatedAt TIMESTAMP NOT NULL,
+	CONSTRAINT check_rating CHECK(Rating > 0 AND Rating < 11),
+	FOREIGN KEY (UserId) REFERENCES users(Id) ON DELETE SET NULL ON UPDATE CASCADE,
+	FOREIGN KEY (ProductId) REFERENCES products(Id) ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+CREATE TABLE journals
+(
+	Id SERIAL PRIMARY KEY,
+    UserId INTEGER,
+    Action CHARACTER VARYING(255) NOT NULL,
+    CraetedAt TIMESTAMP NOT NULL,
+    FOREIGN KEY (UserId) REFERENCES users(Id) ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+CREATE TABLE addresses
+(
+	Id SERIAL PRIMARY KEY,
+    UserId INTEGER UNIQUE,
+	City CHARACTER VARYING(50) NOT NULL,
+    Street CHARACTER VARYING(100) NOT NULL,
+    House CHARACTER VARYING(20) NOT NULL,
+    PostCode CHARACTER VARYING(20),
+	CONSTRAINT check_house CHECK(House ~'^[A-Za-z0-9/]+$'),
+    FOREIGN KEY (UserId) REFERENCES users(Id) ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+CREATE INDEX ix_address_city ON addresses (city);
+
+CREATE TABLE carts
+(
+	Id SERIAL PRIMARY KEY,
+    UserId INTEGER,
+	ProductId INTEGER,
+	Quantity INTEGER NOT NULL,
+	CONSTRAINT check_quantity CHECK(Quantity > 0 AND Quantity < 1000), 
+	FOREIGN KEY (UserId) REFERENCES users(Id) ON DELETE CASCADE ON UPDATE CASCADE,
+	FOREIGN KEY (ProductId) REFERENCES products(Id) ON DELETE CASCADE ON UPDATE CASCADE
+);
